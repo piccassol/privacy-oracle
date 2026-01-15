@@ -23,6 +23,16 @@ const toolExecutors = {
     list_markets: executeMarketTool,
     get_market_info: executeMarketTool,
     check_resolution: executeMarketTool,
+    // Trading tools
+    buy_tokens: executeMarketTool,
+    sell_tokens: executeMarketTool,
+    get_market_prices: executeMarketTool,
+    get_balances: executeMarketTool,
+    // Redemption tools
+    redeem_position: executeMarketTool,
+    claim_refund: executeMarketTool,
+    // URL-aware market creation
+    create_market_from_source: executeMarketTool,
     // News tools
     score_news: executeNewsTool,
     fetch_news: executeNewsTool,

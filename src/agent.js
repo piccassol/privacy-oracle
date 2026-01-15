@@ -198,6 +198,204 @@ export class PrivacyOracleAgent {
         return this.client.fetchMarketAddresses();
     }
 
+    // ========== TRADING METHODS ==========
+
+    async buyTokens(options) {
+        await this.initialize();
+
+        const { marketAddress, side, amountUsdc } = options;
+        const market = new PublicKey(marketAddress);
+
+        this.log(`Buying ${side.toUpperCase()} tokens for ${amountUsdc} USDC on ${marketAddress}`);
+
+        if (!this.client.trading) {
+            throw new Error('Trading module not available. Ensure wallet is configured.');
+        }
+
+        const result = await this.client.trading.buyTokensUsdc({
+            market,
+            usdcAmount: BigInt(Math.floor(amountUsdc * 1_000_000)),
+            tokenId: side === 'yes' ? 0 : 1
+        });
+
+        return {
+            success: true,
+            signature: result.signature,
+            market: marketAddress,
+            side,
+            amountUsdc,
+            tokensReceived: result.tokensReceived?.toString() || 'unknown'
+        };
+    }
+
+    async sellTokens(options) {
+        await this.initialize();
+
+        const { marketAddress, side, amount } = options;
+        const market = new PublicKey(marketAddress);
+
+        this.log(`Selling ${amount} ${side.toUpperCase()} tokens on ${marketAddress}`);
+
+        if (!this.client.trading) {
+            throw new Error('Trading module not available. Ensure wallet is configured.');
+        }
+
+        const result = await this.client.trading.sellTokensBase({
+            market,
+            tokenAmount: BigInt(Math.floor(amount * 1_000_000)),
+            tokenId: side === 'yes' ? 0 : 1
+        });
+
+        return {
+            success: true,
+            signature: result.signature,
+            market: marketAddress,
+            side,
+            amount,
+            usdcReceived: result.usdcReceived?.toString() || 'unknown'
+        };
+    }
+
+    async getMarketPrices(marketAddress) {
+        await this.initialize();
+
+        const market = new PublicKey(marketAddress);
+
+        if (this.client.trading?.getPrices) {
+            const prices = await this.client.trading.getPrices(market);
+            return {
+                market: marketAddress,
+                yesPrice: prices.yesPrice || prices[0],
+                noPrice: prices.noPrice || prices[1],
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        // Fallback: fetch market info and calculate from pool
+        const info = await this.client.fetchMarket(market);
+        return {
+            market: marketAddress,
+            yesPrice: 'N/A - use fetchMarket for pool data',
+            noPrice: 'N/A - use fetchMarket for pool data',
+            raw: info
+        };
+    }
+
+    async getBalances(marketAddress) {
+        await this.initialize();
+
+        const market = new PublicKey(marketAddress);
+
+        if (this.client.trading?.getBalances) {
+            const balances = await this.client.trading.getBalances(market);
+            return {
+                market: marketAddress,
+                yesBalance: balances.yesBalance?.toString() || '0',
+                noBalance: balances.noBalance?.toString() || '0'
+            };
+        }
+
+        return {
+            market: marketAddress,
+            yesBalance: '0',
+            noBalance: '0',
+            note: 'Balance check requires wallet connection'
+        };
+    }
+
+    // ========== REDEMPTION METHODS ==========
+
+    async redeemPosition(marketAddress) {
+        await this.initialize();
+
+        const market = new PublicKey(marketAddress);
+
+        this.log(`Redeeming position on ${marketAddress}`);
+
+        const result = await this.client.redeemPosition(market);
+
+        return {
+            success: true,
+            signature: result.signature,
+            market: marketAddress,
+            amountRedeemed: result.amount?.toString() || 'unknown'
+        };
+    }
+
+    async claimRefund(marketAddress) {
+        await this.initialize();
+
+        const market = new PublicKey(marketAddress);
+
+        this.log(`Claiming refund on ${marketAddress}`);
+
+        const result = await this.client.claimMarketRefund(market);
+
+        return {
+            success: true,
+            signature: result.signature,
+            market: marketAddress,
+            amountRefunded: result.amount?.toString() || 'unknown'
+        };
+    }
+
+    // ========== URL-AWARE MARKET CREATION ==========
+
+    async createMarketFromSource(options) {
+        await this.initialize();
+
+        const { question, sourceUrl, sourceType, durationDays, liquidity } = options;
+        const endTime = BigInt(Math.floor(Date.now() / 1000) + ((durationDays || 30) * 24 * 60 * 60));
+        const amount = liquidity || this.config.defaultLiquidity;
+
+        this.log(`Creating ${sourceType || 'standard'} market: "${question}"`);
+
+        let result;
+
+        if (sourceType === 'twitter' && this.client.createMarketTwitter) {
+            result = await this.client.createMarketTwitter({
+                question,
+                tweetUrl: sourceUrl,
+                initialLiquidity: amount,
+                endTime,
+                baseMint: this.config.collateralMint
+            });
+        } else if (sourceType === 'youtube' && this.client.createMarketYoutube) {
+            result = await this.client.createMarketYoutube({
+                question,
+                youtubeUrl: sourceUrl,
+                initialLiquidity: amount,
+                endTime,
+                baseMint: this.config.collateralMint
+            });
+        } else if (sourceType === 'defi' && this.client.createMarketDefiLlama) {
+            result = await this.client.createMarketDefiLlama({
+                question,
+                metric: sourceUrl,
+                initialLiquidity: amount,
+                endTime,
+                baseMint: this.config.collateralMint
+            });
+        } else {
+            // Fallback to standard market creation
+            result = await this.client.market.createMarket({
+                question,
+                initialLiquidity: amount,
+                endTime,
+                baseMint: this.config.collateralMint
+            });
+        }
+
+        return {
+            success: true,
+            signature: result.signature,
+            market: result.market?.toBase58?.() || result.market?.toString?.() || result.market,
+            question,
+            sourceType: sourceType || 'standard',
+            sourceUrl
+        };
+    }
+
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }

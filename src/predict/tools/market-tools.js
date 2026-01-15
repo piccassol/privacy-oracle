@@ -106,6 +106,142 @@ export const marketToolDefinitions = [
             },
             required: ['address']
         }
+    },
+    // ========== TRADING TOOLS ==========
+    {
+        name: 'buy_tokens',
+        description: 'Buy YES or NO tokens on a prediction market using USDC',
+        input_schema: {
+            type: 'object',
+            properties: {
+                market_address: {
+                    type: 'string',
+                    description: 'The market address on Solana'
+                },
+                side: {
+                    type: 'string',
+                    enum: ['yes', 'no'],
+                    description: 'Which token to buy (yes or no)'
+                },
+                amount_usdc: {
+                    type: 'number',
+                    description: 'Amount of USDC to spend'
+                }
+            },
+            required: ['market_address', 'side', 'amount_usdc']
+        }
+    },
+    {
+        name: 'sell_tokens',
+        description: 'Sell YES or NO tokens from a prediction market for USDC',
+        input_schema: {
+            type: 'object',
+            properties: {
+                market_address: {
+                    type: 'string',
+                    description: 'The market address on Solana'
+                },
+                side: {
+                    type: 'string',
+                    enum: ['yes', 'no'],
+                    description: 'Which token to sell (yes or no)'
+                },
+                amount: {
+                    type: 'number',
+                    description: 'Amount of tokens to sell'
+                }
+            },
+            required: ['market_address', 'side', 'amount']
+        }
+    },
+    {
+        name: 'get_market_prices',
+        description: 'Get current YES and NO token prices for a market',
+        input_schema: {
+            type: 'object',
+            properties: {
+                market_address: {
+                    type: 'string',
+                    description: 'The market address on Solana'
+                }
+            },
+            required: ['market_address']
+        }
+    },
+    {
+        name: 'get_balances',
+        description: 'Get your YES and NO token balances for a market',
+        input_schema: {
+            type: 'object',
+            properties: {
+                market_address: {
+                    type: 'string',
+                    description: 'The market address on Solana'
+                }
+            },
+            required: ['market_address']
+        }
+    },
+    // ========== REDEMPTION TOOLS ==========
+    {
+        name: 'redeem_position',
+        description: 'Redeem winning tokens from a resolved market for USDC',
+        input_schema: {
+            type: 'object',
+            properties: {
+                market_address: {
+                    type: 'string',
+                    description: 'The resolved market address'
+                }
+            },
+            required: ['market_address']
+        }
+    },
+    {
+        name: 'claim_refund',
+        description: 'Claim creator refund from an unresolved/cancelled market',
+        input_schema: {
+            type: 'object',
+            properties: {
+                market_address: {
+                    type: 'string',
+                    description: 'The market address'
+                }
+            },
+            required: ['market_address']
+        }
+    },
+    // ========== URL-AWARE MARKET CREATION ==========
+    {
+        name: 'create_market_from_source',
+        description: 'Create a market linked to a verifiable source (Twitter, YouTube, or DeFi metric)',
+        input_schema: {
+            type: 'object',
+            properties: {
+                question: {
+                    type: 'string',
+                    description: 'The YES/NO market question'
+                },
+                source_url: {
+                    type: 'string',
+                    description: 'URL of the source (tweet, video, or DeFi metric identifier)'
+                },
+                source_type: {
+                    type: 'string',
+                    enum: ['twitter', 'youtube', 'defi'],
+                    description: 'Type of source for verification'
+                },
+                duration_days: {
+                    type: 'number',
+                    description: 'Market duration in days (default: 30)'
+                },
+                liquidity_usdc: {
+                    type: 'number',
+                    description: 'Initial liquidity in USDC (default: 1)'
+                }
+            },
+            required: ['question', 'source_url', 'source_type']
+        }
     }
 ];
 
@@ -201,6 +337,73 @@ export async function executeMarketTool(name, input) {
             const resolver = createResolver();
             const analysis = await resolver.analyzeResolution(market);
             return analysis;
+        }
+
+        // ========== TRADING TOOLS ==========
+
+        case 'buy_tokens': {
+            const agent = await createAgent({ verbose: false });
+            const result = await agent.buyTokens({
+                marketAddress: input.market_address,
+                side: input.side,
+                amountUsdc: input.amount_usdc
+            });
+            return result;
+        }
+
+        case 'sell_tokens': {
+            const agent = await createAgent({ verbose: false });
+            const result = await agent.sellTokens({
+                marketAddress: input.market_address,
+                side: input.side,
+                amount: input.amount
+            });
+            return result;
+        }
+
+        case 'get_market_prices': {
+            const agent = await createAgent({ verbose: false });
+            const result = await agent.getMarketPrices(input.market_address);
+            return result;
+        }
+
+        case 'get_balances': {
+            const agent = await createAgent({ verbose: false });
+            const result = await agent.getBalances(input.market_address);
+            return result;
+        }
+
+        // ========== REDEMPTION TOOLS ==========
+
+        case 'redeem_position': {
+            const agent = await createAgent({ verbose: false });
+            const result = await agent.redeemPosition(input.market_address);
+            return result;
+        }
+
+        case 'claim_refund': {
+            const agent = await createAgent({ verbose: false });
+            const result = await agent.claimRefund(input.market_address);
+            return result;
+        }
+
+        // ========== URL-AWARE MARKET CREATION ==========
+
+        case 'create_market_from_source': {
+            const agent = await createAgent({ verbose: false });
+            const result = await agent.createMarketFromSource({
+                question: input.question,
+                sourceUrl: input.source_url,
+                sourceType: input.source_type,
+                durationDays: input.duration_days || 30,
+                liquidity: BigInt(Math.floor((input.liquidity_usdc || 1) * 1_000_000))
+            });
+            return {
+                ...result,
+                duration_days: input.duration_days || 30,
+                liquidity_usdc: input.liquidity_usdc || 1,
+                network: config.network
+            };
         }
 
         default:
