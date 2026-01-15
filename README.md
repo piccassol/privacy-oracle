@@ -135,6 +135,56 @@ npm run agent ai-resolve --all
 npm run agent ai-resolve -m <market_address>
 ```
 
+### Claude Predict - Interactive AI Agent
+
+Run the Claude Code-like interactive CLI powered by Claude Opus 4.5:
+
+```bash
+# Start Claude Predict
+npm run predict
+
+# Or use the binary directly
+npx claude-predict
+```
+
+Claude Predict provides an interactive chat interface where you can:
+- Generate market ideas through natural conversation
+- Create markets on Solana with simple commands
+- Score news headlines for market potential
+- Analyze markets for resolution
+- Execute shell commands and file operations
+
+**Slash Commands:**
+| Command | Description |
+|---------|-------------|
+| `/help` | Show available commands |
+| `/generate [n]` | Generate n market ideas |
+| `/create [question]` | Create a new market |
+| `/stats [period]` | Show market statistics |
+| `/news [limit]` | Fetch recent privacy news |
+| `/markets [status]` | List your markets |
+| `/score <headline>` | Score news for relevance |
+| `/config` | Show configuration |
+| `/exit` | Exit Claude Predict |
+
+**Example Session:**
+```
+> Generate 3 market ideas about GDPR
+
+[Claude Predict generates ideas using AI...]
+
+1. Will GDPR fines exceed €5B total in 2026?
+2. Will Meta receive another GDPR fine by Q3 2026?
+3. Will the EU approve the AI Act privacy provisions by June 2026?
+
+> Create the first one with 1000 USDC liquidity
+
+[Creating market on Solana...]
+
+✓ Market created successfully!
+Address: 7xKXw9fZq...abc123
+```
+
 ### Daemon Mode
 
 Run as an autonomous daemon that creates markets on a schedule:
@@ -233,12 +283,28 @@ await daemon.stop();
 
 ```
 privacy-oracle-agent/
+  bin/
+    claude-predict.js     # Claude Predict entry point
   src/
     agent.js              # Core agent class with PNP SDK integration
     cli.js                # Command line interface
     config.js             # Environment and configuration handling
     privacy-markets.js    # Market templates and AI generation
     index.js              # Public API exports
+    predict/
+      agent.js            # Claude Predict agentic loop
+      prompts.js          # System prompts
+      slash-commands.js   # /help, /generate, etc.
+      tools/
+        index.js          # Tool registry & executor
+        market-tools.js   # Market generation & creation
+        news-tools.js     # News scoring & fetching
+        analytics-tools.js # Statistics tools
+        file-tools.js     # File operations
+        bash-tool.js      # Shell command execution
+      ui/
+        welcome.js        # Welcome screen
+        renderer.js       # Markdown & output rendering
     helius/
       client.js           # Helius API wrapper (DAS, webhooks, etc.)
       transaction-tracker.js  # Transaction confirmation tracking

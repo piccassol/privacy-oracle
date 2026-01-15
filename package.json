@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "type": "module",
   "bin": {
-    "privacy-oracle": "./src/cli.js"
+    "privacy-oracle": "./src/cli.js",
+    "claude-predict": "./bin/claude-predict.js"
   },
   "scripts": {
     "start": "node src/index.js",
@@ -13,6 +14,9 @@
     "create": "node src/cli.js create",
     "list": "node src/cli.js list",
     "daemon": "node src/cli.js daemon",
+    "predict": "node bin/claude-predict.js",
+    "demo": "node bin/demo-predict.js --auto",
+    "demo:interactive": "node bin/demo-predict.js",
     "test": "node --test test/*.test.js"
   },
   "keywords": [

@@ -67,6 +67,10 @@ export {
     infoLine
 } from './utils/spinner.js';
 
+// Claude Predict - Interactive AI Agent
+export { ClaudePredictAgent, createPredictAgent } from './predict/agent.js';
+export { tools as predictTools, executeTool } from './predict/tools/index.js';
+
 // Quick start function for programmatic use
 export async function quickCreate(question, options = {}) {
     const { createAgent } = await import('./agent.js');
