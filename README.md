@@ -11,7 +11,9 @@ Built for the **Solana Privacy Hackathon 2026**.
 
 ## Features
 
-- AI-generated privacy-themed prediction market questions
+- **Claude AI-powered market generation** - Uses Claude API to generate relevant, verifiable prediction markets from news and topics
+- **AI news scoring** - Automatically scores incoming news for privacy relevance (0-100)
+- **AI resolution helper** - Analyzes markets to determine if conditions have been met
 - Multiple market categories: regulation, technology, adoption, events
 - Supports both AMM and P2P market creation
 - **Autonomous daemon mode** with configurable schedules (cron or interval)
@@ -38,6 +40,9 @@ WALLET_PRIVATE_KEY=your_base58_private_key_or_array
 
 # Helius API key (recommended)
 HELIUS_API_KEY=your_helius_api_key
+
+# Anthropic API key for AI features
+ANTHROPIC_API_KEY=your_anthropic_api_key
 
 # Network (devnet or mainnet)
 NETWORK=devnet
@@ -108,6 +113,26 @@ npm run agent tokens
 
 # Check if a mint supports confidential transfers
 npm run agent tokens --check <mint_address>
+```
+
+### AI-Powered Commands
+
+```bash
+# Generate markets using Claude AI
+npm run agent ai-generate -c 3
+
+# Generate markets about a specific topic
+npm run agent ai-generate -t "Tornado Cash sanctions" -c 2
+
+# Generate and create markets on-chain
+npm run agent ai-generate -c 3 --create
+
+# Score news headlines for privacy relevance
+npm run agent ai-score "EU proposes new encryption regulations" "Bitcoin hits new high"
+
+# Analyze markets for potential resolution
+npm run agent ai-resolve --all
+npm run agent ai-resolve -m <market_address>
 ```
 
 ### Daemon Mode
@@ -227,6 +252,11 @@ privacy-oracle-agent/
     monitoring/
       news-monitor.js     # RSS feed monitoring
       news-scorer.js      # Relevance scoring algorithm
+    ai/
+      market-generator.js # Claude AI market generation
+      scorer.js           # AI news relevance scoring
+      resolver.js         # AI market resolution helper
+      index.js            # AI module exports
     analytics/
       aggregator.js       # Dashboard data aggregation
     collateral/
@@ -241,17 +271,21 @@ privacy-oracle-agent/
 
 ## How It Works
 
-1. **Market Generation**: The agent uses weighted random selection across privacy-themed categories to generate relevant prediction market questions.
+1. **AI Market Generation**: Uses Claude API to generate verifiable YES/NO prediction market questions from news headlines or topics, with appropriate timeframes and liquidity suggestions.
 
-2. **Template System**: Each category contains templates with placeholders filled dynamically with current dates, companies, and amounts.
+2. **News Scoring**: AI scores incoming news items 0-100 for privacy relevance, filtering high-score items for market generation.
 
-3. **Helius Integration**: All Solana RPC calls go through Helius for reliability, speed, and better transaction landing rates.
+3. **Resolution Analysis**: AI analyzes markets to determine if conditions have been met, providing confidence scores and suggested actions.
 
-4. **PNP SDK**: Markets are created on the PNP Exchange protocol, supporting both AMM pools and P2P betting.
+4. **Template Fallback**: When AI is unavailable, uses weighted random selection across privacy-themed categories with dynamic template filling.
 
-5. **Daemon Mode**: Autonomous operation with configurable schedules, news monitoring, and webhook integration.
+5. **Helius Integration**: All Solana RPC calls go through Helius for reliability, speed, and better transaction landing rates.
 
-6. **Privacy Tokens**: Support for Token-2022 confidential transfers as collateral.
+6. **PNP SDK**: Markets are created on the PNP Exchange protocol, supporting both AMM pools and P2P betting.
+
+7. **Daemon Mode**: Autonomous operation with configurable schedules, news monitoring, and webhook integration.
+
+8. **Privacy Tokens**: Support for Token-2022 confidential transfers as collateral.
 
 ## Privacy Focus
 

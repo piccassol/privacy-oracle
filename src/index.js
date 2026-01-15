@@ -36,6 +36,11 @@ export { scoreRelevance, generateMarketFromNews, PRIVACY_KEYWORDS } from './moni
 // Analytics
 export { DashboardAggregator, createAggregator, formatNumber, formatDuration } from './analytics/aggregator.js';
 
+// AI-powered generation (Claude API)
+export { AIMarketGenerator, createMarketGenerator } from './ai/market-generator.js';
+export { AIResolver, createResolver } from './ai/resolver.js';
+export { AIScorer, createScorer, quickScore } from './ai/scorer.js';
+
 // Privacy tokens
 export {
     TOKENS,

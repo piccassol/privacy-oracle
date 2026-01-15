@@ -76,6 +76,13 @@ export function getConfig() {
             enabled: process.env.WEBHOOK_ENABLED === 'true',
             port: parseInt(process.env.WEBHOOK_PORT || '3000', 10),
             authToken: process.env.WEBHOOK_AUTH_TOKEN || null
+        },
+
+        // AI settings
+        anthropicApiKey: process.env.ANTHROPIC_API_KEY || null,
+        ai: {
+            enabled: process.env.AI_ENABLED !== 'false',
+            minRelevanceScore: parseInt(process.env.AI_MIN_RELEVANCE_SCORE || '50', 10)
         }
     };
 }
@@ -94,6 +101,10 @@ export function validateConfig(config) {
 
     if (config.webhook.enabled && !config.webhook.authToken) {
         warnings.push('WEBHOOK_AUTH_TOKEN not set - webhook endpoints are unprotected');
+    }
+
+    if (config.ai.enabled && !config.anthropicApiKey) {
+        warnings.push('ANTHROPIC_API_KEY not set - AI features will be unavailable');
     }
 
     return {

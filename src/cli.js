@@ -12,6 +12,9 @@ import { createAggregator, formatNumber, formatDuration } from './analytics/aggr
 import { withSpinner, StepProgress, successLine, errorLine, infoLine } from './utils/spinner.js';
 import { listSupportedTokens, checkConfidentialTransferSupport } from './collateral/privacy-tokens.js';
 import { Connection } from '@solana/web3.js';
+import { AIMarketGenerator } from './ai/market-generator.js';
+import { AIScorer } from './ai/scorer.js';
+import { AIResolver } from './ai/resolver.js';
 
 const program = new Command();
 
@@ -692,6 +695,249 @@ program
             console.log(chalk.gray('Tip: Use a Token-2022 mint with confidential transfer extension'));
             console.log(chalk.gray('     for privacy-focused collateral.'));
             console.log(chalk.gray('     Set COLLATERAL_TOKEN in .env to use a custom mint.'));
+
+        } catch (error) {
+            console.error(chalk.red('Error:'), error.message);
+            process.exit(1);
+        }
+    });
+
+// AI-powered generation
+program
+    .command('ai-generate')
+    .description('Generate market ideas using Claude AI')
+    .option('-c, --count <count>', 'Number of markets to generate', '3')
+    .option('-t, --topic <topic>', 'Specific topic to generate markets about')
+    .option('--create', 'Actually create the markets on-chain')
+    .option('-v, --verbose', 'Verbose output')
+    .action(async (options) => {
+        try {
+            const config = getConfig();
+
+            if (!config.anthropicApiKey) {
+                errorLine('ANTHROPIC_API_KEY not configured');
+                console.log(chalk.gray('Set ANTHROPIC_API_KEY in .env to use AI features'));
+                process.exit(1);
+            }
+
+            const count = parseInt(options.count, 10);
+            console.log(chalk.cyan(`\nGenerating ${count} AI-powered market ideas...\n`));
+
+            const generator = new AIMarketGenerator(config.anthropicApiKey);
+
+            let results;
+            if (options.topic) {
+                results = await withSpinner(
+                    `Generating markets about "${options.topic}"`,
+                    async () => {
+                        const markets = [];
+                        for (let i = 0; i < count; i++) {
+                            const result = await generator.generateFromTopic(options.topic);
+                            markets.push({ success: true, market: result });
+                        }
+                        return markets;
+                    },
+                    { successText: 'Markets generated' }
+                );
+            } else {
+                results = await withSpinner(
+                    'Generating diverse markets',
+                    () => generator.generateDiverseMarkets(count),
+                    { successText: 'Markets generated' }
+                );
+            }
+
+            console.log();
+            results.forEach((result, i) => {
+                if (result.success) {
+                    const m = result.market;
+                    console.log(chalk.yellow(`${i + 1}.`), m.question);
+                    console.log(chalk.gray(`   Category: ${m.categoryName || m.category}`));
+                    console.log(chalk.gray(`   Duration: ${m.suggestedDurationDays} days | Liquidity: ${m.suggestedLiquidityUSDC} USDC`));
+                    console.log(chalk.gray(`   Urgency: ${m.urgency}`));
+                    console.log(chalk.dim(`   Reasoning: ${m.reasoning}`));
+                    console.log();
+                } else {
+                    errorLine(`Failed: ${result.error}`);
+                }
+            });
+
+            // Optionally create markets
+            if (options.create) {
+                const validation = validateConfig(config);
+                if (!validation.valid) {
+                    console.log(chalk.yellow('\nCannot create markets: wallet not configured'));
+                    return;
+                }
+
+                const { confirm } = await inquirer.prompt([{
+                    type: 'confirm',
+                    name: 'confirm',
+                    message: `Create ${results.filter(r => r.success).length} markets on Solana?`,
+                    default: false
+                }]);
+
+                if (confirm) {
+                    const agent = new PrivacyOracleAgent({ verbose: options.verbose });
+
+                    for (const result of results.filter(r => r.success)) {
+                        const m = result.market;
+                        try {
+                            const created = await withSpinner(
+                                `Creating: ${m.question.slice(0, 50)}...`,
+                                () => agent.createPrivacyMarket({
+                                    question: m.question,
+                                    durationDays: m.suggestedDurationDays,
+                                    liquidity: BigInt(m.suggestedLiquidityUSDC * 1000000)
+                                }),
+                                { successText: 'Created' }
+                            );
+                            successLine(`Market: ${created.market}`);
+                        } catch (error) {
+                            errorLine(`Failed: ${error.message}`);
+                        }
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.error(chalk.red('Error:'), error.message);
+            process.exit(1);
+        }
+    });
+
+// AI news scoring
+program
+    .command('ai-score')
+    .description('Score news headlines for privacy relevance using AI')
+    .argument('<headlines...>', 'Headlines to score (or use --file)')
+    .option('-f, --file <file>', 'Read headlines from file (one per line)')
+    .option('--min-score <score>', 'Minimum score to show', '0')
+    .action(async (headlines, options) => {
+        try {
+            const config = getConfig();
+
+            if (!config.anthropicApiKey) {
+                errorLine('ANTHROPIC_API_KEY not configured');
+                process.exit(1);
+            }
+
+            const scorer = new AIScorer(config.anthropicApiKey);
+            const minScore = parseInt(options.minScore, 10);
+
+            // Prepare news items
+            const newsItems = headlines.map(h => ({ title: h }));
+
+            console.log(chalk.cyan(`\nScoring ${newsItems.length} headlines for privacy relevance...\n`));
+
+            const results = await withSpinner(
+                'Scoring headlines',
+                () => scorer.scoreBatch(newsItems),
+                { successText: 'Scoring complete' }
+            );
+
+            console.log();
+            results
+                .filter(r => r.success && r.score >= minScore)
+                .sort((a, b) => b.score - a.score)
+                .forEach(r => {
+                    const scoreColor = r.score >= 70 ? chalk.green :
+                                      r.score >= 50 ? chalk.yellow : chalk.gray;
+
+                    console.log(scoreColor(`[${r.score}]`), r.newsItem.title);
+                    console.log(chalk.gray(`     Category: ${r.category} | Urgency: ${r.urgency}`));
+                    if (r.marketPotential) {
+                        console.log(chalk.cyan(`     Market idea: ${r.suggestedMarketAngle}`));
+                    }
+                    console.log();
+                });
+
+        } catch (error) {
+            console.error(chalk.red('Error:'), error.message);
+            process.exit(1);
+        }
+    });
+
+// AI market resolution analysis
+program
+    .command('ai-resolve')
+    .description('Analyze markets for potential resolution using AI')
+    .option('-a, --all', 'Check all active markets')
+    .option('-m, --market <address>', 'Check specific market')
+    .option('--min-confidence <conf>', 'Minimum confidence to show', '0.5')
+    .action(async (options) => {
+        try {
+            const config = getConfig();
+
+            if (!config.anthropicApiKey) {
+                errorLine('ANTHROPIC_API_KEY not configured');
+                process.exit(1);
+            }
+
+            const resolver = new AIResolver(config.anthropicApiKey);
+            const minConfidence = parseFloat(options.minConfidence);
+
+            let markets = [];
+
+            if (options.market) {
+                // Fetch single market
+                const agent = new PrivacyOracleAgent({ verbose: false });
+                const info = await agent.fetchMarketInfo(options.market);
+                markets = [{
+                    address: options.market,
+                    question: info.question,
+                    creationTime: info.startTime?.getTime() || Date.now(),
+                    endTime: info.endTime?.getTime(),
+                    durationDays: Math.ceil((info.endTime - info.startTime) / (1000 * 60 * 60 * 24))
+                }];
+            } else if (options.all) {
+                // Load from storage
+                const storagePath = config.daemon.storagePath || ':memory:';
+                const store = createMarketStore(storagePath);
+                markets = store.getAllMarkets({ status: 'active' });
+                store.close();
+            } else {
+                errorLine('Specify --market <address> or --all');
+                process.exit(1);
+            }
+
+            if (markets.length === 0) {
+                console.log(chalk.yellow('No markets to analyze'));
+                return;
+            }
+
+            console.log(chalk.cyan(`\nAnalyzing ${markets.length} markets for resolution...\n`));
+
+            const results = await withSpinner(
+                'Analyzing markets',
+                () => resolver.analyzeMarkets(markets),
+                { successText: 'Analysis complete' }
+            );
+
+            console.log();
+            results.forEach(r => {
+                if (!r.success) {
+                    errorLine(`Failed to analyze: ${r.error}`);
+                    return;
+                }
+
+                const a = r.analysis;
+                if (a.confidence < minConfidence) return;
+
+                const confColor = a.confidence >= 0.8 ? chalk.green :
+                                 a.confidence >= 0.5 ? chalk.yellow : chalk.gray;
+
+                console.log(chalk.white(r.market.question));
+                console.log(chalk.gray(`  Address: ${r.market.address}`));
+                console.log(`  Can resolve: ${a.canResolve ? chalk.green('Yes') : chalk.yellow('No')}`);
+                if (a.canResolve) {
+                    console.log(`  Outcome: ${a.outcome === 'yes' ? chalk.green('YES') : a.outcome === 'no' ? chalk.red('NO') : chalk.gray('Unknown')}`);
+                }
+                console.log(`  Confidence: ${confColor((a.confidence * 100).toFixed(0) + '%')}`);
+                console.log(`  Action: ${a.suggestedAction}`);
+                console.log(chalk.dim(`  Reasoning: ${a.reasoning.slice(0, 200)}...`));
+                console.log();
+            });
 
         } catch (error) {
             console.error(chalk.red('Error:'), error.message);
