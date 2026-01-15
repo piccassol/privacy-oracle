@@ -1,7 +1,9 @@
 # Privacy Oracle Agent
-![images (1)](https://github.com/user-attachments/assets/8912f5bb-d77d-46da-b1ab-e968a741b3bd)
+![G-rE4VTbAAAlPGj](https://github.com/user-attachments/assets/b314e991-4cb3-4914-8689-470a94411c20)
 
-<img width="371" height="221" alt="image" src="https://github.com/user-attachments/assets/e86d97dd-9456-4480-97e5-23a277cdf3a9" />
+
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/6dd4f578-959f-4bff-bb72-0b558ce885ae" />
+
 
 
 An AI-powered agent for creating privacy-themed prediction markets on Solana using the PNP Exchange protocol and Helius infrastructure.
