@@ -1,13 +1,9 @@
 # Privacy Oracle Agent
+![images (1)](https://github.com/user-attachments/assets/8912f5bb-d77d-46da-b1ab-e968a741b3bd)
 
 An AI-powered agent for creating privacy-themed prediction markets on Solana using the PNP Exchange protocol and Helius infrastructure.
 
-Built for the **Solana Privacy Hackathon 2026**.
-
-## Bounties Targeted
-
-- **Helius ($5,000)** - Best privacy project leveraging Helius RPCs and developer tooling
-- **PNP Exchange ($2,500)** - AI agents creating prediction markets with privacy-focused tokens
+**Powered by Opus 4.5**.
 
 ## Features
 
@@ -378,6 +374,11 @@ Contributions welcome! Areas of interest:
 - Integration with more privacy protocols
 - Enhanced AI market generation
 - Market monitoring and analytics
+
+- ## Bounties Targeted
+
+- **Helius ($5,000)** - Best privacy project leveraging Helius RPCs and developer tooling
+- **PNP Exchange ($2,500)** - AI agents creating prediction markets with privacy-focused tokens
 
 ## License
 
