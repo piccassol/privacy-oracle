@@ -1,8 +1,9 @@
-# PNPFUCIUS
+<img width="650" height="75" alt="image" src="https://github.com/user-attachments/assets/9227fb36-e231-402c-bd37-3df142bef329" />
 
-![PNPFUCIUS CLI](1.png)
+<img width="1536" height="1024" alt="1" src="https://github.com/user-attachments/assets/13e03e53-ba36-44cc-a9e0-11b2af73267d" />
 
-![PNPFUCIUS Demo](2.png)
+
+
 
 **The PNP Exchange CLI & SDK for Solana prediction markets.**
 
