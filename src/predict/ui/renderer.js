@@ -2,6 +2,12 @@
 
 import chalk from 'chalk';
 
+// Purple color definitions
+const purple = chalk.hex('#A855F7');
+const purpleBright = chalk.hex('#C084FC');
+const purpleDim = chalk.hex('#7C3AED');
+const violet = chalk.hex('#8B5CF6');
+
 /**
  * Render markdown-like text for terminal output
  * Simple rendering without external dependencies
@@ -12,9 +18,9 @@ export function renderMarkdown(text) {
     let result = text;
 
     // Headers
-    result = result.replace(/^### (.+)$/gm, chalk.bold.cyan('   $1'));
-    result = result.replace(/^## (.+)$/gm, chalk.bold.cyan('  $1'));
-    result = result.replace(/^# (.+)$/gm, chalk.bold.cyan(' $1'));
+    result = result.replace(/^### (.+)$/gm, purpleBright.bold('   $1'));
+    result = result.replace(/^## (.+)$/gm, purpleBright.bold('  $1'));
+    result = result.replace(/^# (.+)$/gm, purpleBright.bold(' $1'));
 
     // Bold
     result = result.replace(/\*\*(.+?)\*\*/g, chalk.bold('$1'));
@@ -23,29 +29,29 @@ export function renderMarkdown(text) {
     result = result.replace(/\*(.+?)\*/g, chalk.italic('$1'));
 
     // Inline code
-    result = result.replace(/`([^`]+)`/g, chalk.yellow('$1'));
+    result = result.replace(/`([^`]+)`/g, violet('$1'));
 
     // Code blocks (simple - just highlight)
     result = result.replace(/```[\w]*\n([\s\S]*?)```/g, (_, code) => {
-        return chalk.gray('─'.repeat(40)) + '\n' +
-            chalk.yellow(code.trim()) + '\n' +
-            chalk.gray('─'.repeat(40));
+        return purple('─'.repeat(40)) + '\n' +
+            violet(code.trim()) + '\n' +
+            purple('─'.repeat(40));
     });
 
     // Lists
-    result = result.replace(/^- (.+)$/gm, chalk.dim('  •') + ' $1');
-    result = result.replace(/^\d+\. (.+)$/gm, (_, item) => chalk.dim('  •') + ' ' + item);
+    result = result.replace(/^- (.+)$/gm, purple('  ◆') + ' $1');
+    result = result.replace(/^\d+\. (.+)$/gm, (_, item) => purple('  ◆') + ' ' + item);
 
     // Links [text](url)
     result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g,
-        chalk.blue.underline('$1') + chalk.dim(' ($2)')
+        purpleBright.underline('$1') + chalk.dim(' ($2)')
     );
 
     // Blockquotes
-    result = result.replace(/^> (.+)$/gm, chalk.gray('  │ ') + chalk.italic('$1'));
+    result = result.replace(/^> (.+)$/gm, purple('  │ ') + chalk.italic('$1'));
 
     // Horizontal rules
-    result = result.replace(/^---$/gm, chalk.gray('─'.repeat(50)));
+    result = result.replace(/^---$/gm, purple('─'.repeat(50)));
 
     return result;
 }
@@ -56,7 +62,7 @@ export function renderMarkdown(text) {
 export function formatToolResult(toolName, result) {
     const lines = [];
 
-    lines.push(chalk.dim(`  ┌─ ${toolName} ─────────────────────`));
+    lines.push(purpleDim(`  ┌─ ${toolName} ─────────────────────`));
 
     if (result.error) {
         lines.push(chalk.red(`  │ Error: ${result.error}`));
@@ -64,11 +70,11 @@ export function formatToolResult(toolName, result) {
         // Format based on tool type
         const formatted = formatResultByType(toolName, result);
         for (const line of formatted.split('\n')) {
-            lines.push(chalk.dim('  │ ') + line);
+            lines.push(purpleDim('  │ ') + line);
         }
     }
 
-    lines.push(chalk.dim('  └' + '─'.repeat(40)));
+    lines.push(purpleDim('  └' + '─'.repeat(40)));
 
     return lines.join('\n');
 }
@@ -99,10 +105,10 @@ function formatMarketCreation(result) {
     if (!result.success) return chalk.red('Market creation failed');
 
     return [
-        chalk.green('✓ Market created successfully!'),
+        purple('✓ Market created successfully!'),
         '',
         `${chalk.dim('Question:')} ${result.question}`,
-        `${chalk.dim('Address:')}  ${chalk.yellow(result.market)}`,
+        `${chalk.dim('Address:')}  ${violet(result.market)}`,
         `${chalk.dim('Signature:')} ${chalk.gray(result.signature?.slice(0, 20) + '...')}`,
         `${chalk.dim('Duration:')} ${result.duration_days} days`,
         `${chalk.dim('Liquidity:')} ${result.liquidity_usdc} USDC`,
@@ -186,7 +192,7 @@ export function printSpinner(message) {
     let i = 0;
 
     return setInterval(() => {
-        process.stdout.write(`\r${chalk.cyan(frames[i++ % frames.length])} ${message}`);
+        process.stdout.write(`\r${purple(frames[i++ % frames.length])} ${message}`);
     }, 80);
 }
 
@@ -205,5 +211,5 @@ export function stopSpinner(spinner, message = '') {
  * Print tool usage indicator
  */
 export function printToolUse(toolName) {
-    console.log(chalk.dim(`\n  [Using ${toolName}...]`));
+    console.log(purpleDim(`\n  ◆ ${toolName}`));
 }

@@ -1,22 +1,28 @@
-// Welcome screen for Claude Predict
+// Welcome screen for PNPFUCIUS - The PNP Exchange CLI
 
 import chalk from 'chalk';
 import { getConfig } from '../../config.js';
 
-const LOGO = `
- ██████╗██╗      █████╗ ██╗   ██╗██████╗ ███████╗
-██╔════╝██║     ██╔══██╗██║   ██║██╔══██╗██╔════╝
-██║     ██║     ███████║██║   ██║██║  ██║█████╗
-██║     ██║     ██╔══██║██║   ██║██║  ██║██╔══╝
-╚██████╗███████╗██║  ██║╚██████╔╝██████╔╝███████╗
- ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝
+// Purple color definitions
+const purple = chalk.hex('#A855F7');
+const purpleBright = chalk.hex('#C084FC');
+const purpleDim = chalk.hex('#7C3AED');
+const purpleBold = chalk.hex('#A855F7').bold;
+const violet = chalk.hex('#8B5CF6');
 
-██████╗ ██████╗ ███████╗██████╗ ██╗ ██████╗████████╗
-██╔══██╗██╔══██╗██╔════╝██╔══██╗██║██╔════╝╚══██╔══╝
-██████╔╝██████╔╝█████╗  ██║  ██║██║██║        ██║
-██╔═══╝ ██╔══██╗██╔══╝  ██║  ██║██║██║        ██║
-██║     ██║  ██║███████╗██████╔╝██║╚██████╗   ██║
-╚═╝     ╚═╝  ╚═╝╚══════╝╚═════╝ ╚═╝ ╚═════╝   ╚═╝
+const LOGO = `
+${purple('╔════════════════════════════════════════════════════════════════════════╗')}
+${purple('║')}                                                                        ${purple('║')}
+${purple('║')}  ${purpleBright('██████╗ ███╗   ██╗██████╗ ███████╗██╗   ██╗ ██████╗██╗██╗   ██╗███████╗')}  ${purple('║')}
+${purple('║')}  ${purpleBright('██╔══██╗████╗  ██║██╔══██╗██╔════╝██║   ██║██╔════╝██║██║   ██║██╔════╝')}  ${purple('║')}
+${purple('║')}  ${purpleBright('██████╔╝██╔██╗ ██║██████╔╝█████╗  ██║   ██║██║     ██║██║   ██║███████╗')}  ${purple('║')}
+${purple('║')}  ${purpleBright('██╔═══╝ ██║╚██╗██║██╔═══╝ ██╔══╝  ██║   ██║██║     ██║██║   ██║╚════██║')}  ${purple('║')}
+${purple('║')}  ${purpleBright('██║     ██║ ╚████║██║     ██║     ╚██████╔╝╚██████╗██║╚██████╔╝███████║')}  ${purple('║')}
+${purple('║')}  ${purpleBright('╚═╝     ╚═╝  ╚═══╝╚═╝     ╚═╝      ╚═════╝  ╚═════╝╚═╝ ╚═════╝ ╚══════╝')}  ${purple('║')}
+${purple('║')}                                                                        ${purple('║')}
+${purple('║')}  ${violet('        "The wise trader predicts with patience"')}                     ${purple('║')}
+${purple('║')}                                                                        ${purple('║')}
+${purple('╚════════════════════════════════════════════════════════════════════════╝')}
 `;
 
 export function printWelcome(options = {}) {
@@ -29,74 +35,112 @@ export function printWelcome(options = {}) {
     console.clear();
 
     // Logo
-    console.log(chalk.cyan(LOGO));
+    console.log(LOGO);
 
     // Tagline
-    console.log(chalk.dim('  Privacy Prediction Markets • Powered by Claude Opus 4.5'));
+    console.log(purpleDim('  ◆ The PNP Exchange CLI'));
+    console.log(chalk.dim('  ◆ Create, Trade, and Settle Prediction Markets on Solana'));
     console.log();
 
     // Status bar
     const networkColor = config.isMainnet ? chalk.red : chalk.green;
-    const networkLabel = config.isMainnet ? 'mainnet' : 'devnet';
+    const networkLabel = config.isMainnet ? 'MAINNET' : 'DEVNET';
 
-    console.log(chalk.gray('─'.repeat(60)));
-    console.log(
-        `  ${chalk.dim('Network:')} ${networkColor(networkLabel)}` +
-        `  ${chalk.dim('│')}  ` +
-        `${chalk.dim('Wallet:')} ${chalk.white(walletDisplay)}` +
-        `  ${chalk.dim('│')}  ` +
-        `${chalk.dim('Helius:')} ${config.heliusKey ? chalk.green('✓') : chalk.yellow('○')}`
+    console.log(purple('  ┌' + '─'.repeat(62) + '┐'));
+    console.log(purple('  │') +
+        `  ${chalk.dim('Network')} ${networkColor.bold(networkLabel.padEnd(8))}` +
+        `${chalk.dim('│')} ` +
+        `${chalk.dim('Wallet')} ${chalk.white(walletDisplay.padEnd(16))}` +
+        `${chalk.dim('│')} ` +
+        `${chalk.dim('Helius')} ${config.heliusKey ? chalk.green('●') : chalk.yellow('○')}  ` +
+        purple('│')
     );
-    console.log(chalk.gray('─'.repeat(60)));
+    console.log(purple('  └' + '─'.repeat(62) + '┘'));
     console.log();
 
     // Help hint
-    console.log(chalk.dim('  Type a message or use /help for commands.'));
+    console.log(chalk.dim('  Type a message or use ') + purple('/help') + chalk.dim(' for commands'));
     console.log();
 }
 
 export function printHelp() {
     console.log();
-    console.log(chalk.cyan.bold('  Claude Predict Commands'));
-    console.log(chalk.gray('─'.repeat(50)));
+    console.log(purpleBold('  PNPFUCIUS Commands'));
+    console.log(purple('  ' + '─'.repeat(50)));
     console.log();
 
-    const commands = [
-        ['/help', 'Show this help message'],
-        ['/generate [n]', 'Generate n market ideas'],
-        ['/create', 'Create a market interactively'],
-        ['/stats', 'Show market statistics'],
-        ['/news', 'Fetch and score recent news'],
-        ['/markets', 'List your markets'],
-        ['/categories', 'Show market categories'],
-        ['/config', 'Show configuration'],
-        ['/clear', 'Clear the screen'],
-        ['/exit', 'Exit Claude Predict']
+    const sections = [
+        {
+            title: 'Markets',
+            commands: [
+                ['/create [q]', 'Create AMM market'],
+                ['/p2p [q]', 'Create P2P market'],
+                ['/odds <q>', 'Market with custom odds'],
+                ['/discover', 'Browse ALL PNP markets'],
+                ['/markets', 'List your markets'],
+            ]
+        },
+        {
+            title: 'Trading',
+            commands: [
+                ['/buy', 'Buy YES/NO tokens'],
+                ['/sell', 'Sell tokens'],
+                ['/prices <addr>', 'Get market prices'],
+                ['/balance', 'Check your balances'],
+            ]
+        },
+        {
+            title: 'Settlement',
+            commands: [
+                ['/oracle <addr>', 'Get LLM settlement criteria'],
+                ['/settle', 'Settle a market'],
+                ['/redeem', 'Redeem winning position'],
+                ['/refund', 'Claim refund'],
+            ]
+        },
+        {
+            title: 'Info',
+            commands: [
+                ['/info <addr>', 'Market details'],
+                ['/config', 'Show configuration'],
+                ['/pnp', 'PNP protocol info'],
+            ]
+        },
+        {
+            title: 'System',
+            commands: [
+                ['/clear', 'Clear screen'],
+                ['/help', 'Show this help'],
+                ['/exit', 'Exit PNPFUCIUS'],
+            ]
+        }
     ];
 
-    for (const [cmd, desc] of commands) {
-        console.log(`  ${chalk.yellow(cmd.padEnd(18))} ${chalk.dim(desc)}`);
+    for (const section of sections) {
+        console.log(violet(`  ${section.title}`));
+        for (const [cmd, desc] of section.commands) {
+            console.log(`    ${purple(cmd.padEnd(16))} ${chalk.dim(desc)}`);
+        }
+        console.log();
     }
 
-    console.log();
-    console.log(chalk.dim('  Or just chat naturally - ask me to generate markets,'));
-    console.log(chalk.dim('  score news, or create predictions about privacy topics.'));
+    console.log(violet('  "The market reveals truth to those who wait"'));
     console.log();
 }
 
 export function printGoodbye() {
     console.log();
-    console.log(chalk.cyan('  Thanks for using Claude Predict!'));
-    console.log(chalk.dim('  May your predictions be profitable.'));
+    console.log(purple('  ◆ Thanks for using PNPFUCIUS!'));
+    console.log(chalk.dim('  ◆ "The wise trader knows when to exit"'));
     console.log();
 }
 
 export function printError(message) {
     console.log();
-    console.log(chalk.red(`  Error: ${message}`));
+    console.log(chalk.red(`  ✗ Error: ${message}`));
     console.log();
 }
 
 export function printDivider() {
-    console.log(chalk.gray('─'.repeat(60)));
+    console.log(purple('─'.repeat(60)));
 }

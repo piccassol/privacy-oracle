@@ -1,28 +1,20 @@
-// Tool registry and executor for Claude Predict
+// Tool registry and executor for PNPFUCIUS - The PNP Exchange CLI
 
 import { marketToolDefinitions, executeMarketTool } from './market-tools.js';
-import { newsToolDefinitions, executeNewsTool } from './news-tools.js';
 import { analyticsToolDefinitions, executeAnalyticsTool } from './analytics-tools.js';
-import { fileToolDefinitions, executeFileTool } from './file-tools.js';
-import { bashToolDefinition, executeBashTool } from './bash-tool.js';
 
-// Combine all tool definitions for Claude API
+// Combine all tool definitions
 export const tools = [
     ...marketToolDefinitions,
-    ...newsToolDefinitions,
-    ...analyticsToolDefinitions,
-    ...fileToolDefinitions,
-    bashToolDefinition
+    ...analyticsToolDefinitions
 ];
 
 // Tool name to executor mapping
 const toolExecutors = {
     // Market tools
-    generate_market: executeMarketTool,
     create_market: executeMarketTool,
     list_markets: executeMarketTool,
     get_market_info: executeMarketTool,
-    check_resolution: executeMarketTool,
     // Trading tools
     buy_tokens: executeMarketTool,
     sell_tokens: executeMarketTool,
@@ -33,19 +25,33 @@ const toolExecutors = {
     claim_refund: executeMarketTool,
     // URL-aware market creation
     create_market_from_source: executeMarketTool,
-    // News tools
-    score_news: executeNewsTool,
-    fetch_news: executeNewsTool,
-    generate_from_news: executeNewsTool,
+    // PNP Oracle/Settlement tools
+    get_settlement_criteria: executeMarketTool,
+    get_settlement_data: executeMarketTool,
+    wait_for_settlement: executeMarketTool,
+    settle_market: executeMarketTool,
+    // Market Discovery tools
+    discover_all_markets: executeMarketTool,
+    get_market_metadata: executeMarketTool,
+    get_v2_market_info: executeMarketTool,
+    get_p2p_market_info: executeMarketTool,
+    // P2P Market tools with custom odds
+    create_p2p_market_simple: executeMarketTool,
+    create_p2p_market_with_odds: executeMarketTool,
+    create_amm_market_with_odds: executeMarketTool,
+    // Custom Oracle tools
+    create_market_with_oracle: executeMarketTool,
+    // V3/P2P Redemption tools
+    redeem_v3_position: executeMarketTool,
+    redeem_p2p_position: executeMarketTool,
+    claim_p2p_refund: executeMarketTool,
+    // V3 Trading tools
+    buy_v3_tokens: executeMarketTool,
+    // Global config
+    get_pnp_config: executeMarketTool,
     // Analytics tools
     get_stats: executeAnalyticsTool,
-    get_categories: executeAnalyticsTool,
-    // File tools
-    read_file: executeFileTool,
-    write_file: executeFileTool,
-    list_files: executeFileTool,
-    // Bash tool
-    run_command: executeBashTool
+    get_categories: executeAnalyticsTool
 };
 
 /**
@@ -109,9 +115,6 @@ export function listTools() {
 export function getToolsByCategory() {
     return {
         market: marketToolDefinitions.map(t => t.name),
-        news: newsToolDefinitions.map(t => t.name),
-        analytics: analyticsToolDefinitions.map(t => t.name),
-        file: fileToolDefinitions.map(t => t.name),
-        system: [bashToolDefinition.name]
+        analytics: analyticsToolDefinitions.map(t => t.name)
     };
 }

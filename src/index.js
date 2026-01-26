@@ -1,5 +1,5 @@
-// Privacy Oracle Agent
-// AI-powered prediction market creator for privacy-themed markets on Solana
+// PNPFUCIUS - The PNP Exchange SDK
+// Create, trade, and settle prediction markets on Solana
 // Uses Helius RPC + PNP SDK
 
 // Core agent
@@ -36,11 +36,6 @@ export { scoreRelevance, generateMarketFromNews, PRIVACY_KEYWORDS } from './moni
 // Analytics
 export { DashboardAggregator, createAggregator, formatNumber, formatDuration } from './analytics/aggregator.js';
 
-// AI-powered generation (Claude API)
-export { AIMarketGenerator, createMarketGenerator } from './ai/market-generator.js';
-export { AIResolver, createResolver } from './ai/resolver.js';
-export { AIScorer, createScorer, quickScore } from './ai/scorer.js';
-
 // Privacy tokens
 export {
     TOKENS,
@@ -67,9 +62,9 @@ export {
     infoLine
 } from './utils/spinner.js';
 
-// Claude Predict - Interactive AI Agent
-export { ClaudePredictAgent, createPredictAgent } from './predict/agent.js';
-export { tools as predictTools, executeTool } from './predict/tools/index.js';
+// PNPFUCIUS - Interactive CLI Agent
+export { PnpfuciusAgent, createPnpfuciusAgent } from './predict/agent.js';
+export { tools as pnpTools, executeTool } from './predict/tools/index.js';
 
 // Quick start function for programmatic use
 export async function quickCreate(question, options = {}) {

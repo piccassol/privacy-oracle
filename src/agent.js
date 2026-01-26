@@ -399,6 +399,635 @@ export class PrivacyOracleAgent {
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
+
+    // ========== PNP ORACLE/SETTLEMENT METHODS ==========
+
+    /**
+     * Fetch settlement criteria from PNP's LLM oracle
+     * This returns the AI-generated criteria for how the market should be resolved
+     */
+    async fetchSettlementCriteria(marketAddress, options = {}) {
+        await this.initialize();
+
+        const market = typeof marketAddress === 'string' ? marketAddress : marketAddress.toString();
+
+        this.log(`Fetching settlement criteria for ${market}`);
+
+        try {
+            const criteria = await this.client.fetchSettlementCriteria(market, options.baseUrl);
+            return {
+                success: true,
+                market,
+                criteria
+            };
+        } catch (error) {
+            this.log(`Error fetching settlement criteria: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Get settlement data (resolution result) from PNP's LLM oracle
+     */
+    async getSettlementData(marketAddress, options = {}) {
+        await this.initialize();
+
+        const market = typeof marketAddress === 'string' ? marketAddress : marketAddress.toString();
+
+        this.log(`Fetching settlement data for ${market}`);
+
+        try {
+            const data = await this.client.getSettlementData(market, options.baseUrl);
+            return {
+                success: true,
+                market,
+                data
+            };
+        } catch (error) {
+            this.log(`Error fetching settlement data: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Wait for settlement criteria to become available (with retries)
+     */
+    async waitForSettlementCriteria(marketAddress, options = {}) {
+        await this.initialize();
+
+        const market = typeof marketAddress === 'string' ? marketAddress : marketAddress.toString();
+        const { retryDelayMs = 2000, maxRetryTimeMs = 30000, baseUrl } = options;
+
+        this.log(`Waiting for settlement criteria for ${market}...`);
+
+        try {
+            const result = await this.client.waitForSettlementCriteria(market, baseUrl, {
+                retryDelayMs,
+                maxRetryTimeMs
+            });
+            return {
+                success: true,
+                market,
+                resolvable: result.resolvable,
+                answer: result.answer,
+                criteria: result.criteria
+            };
+        } catch (error) {
+            this.log(`Error waiting for settlement criteria: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Settle a market using the oracle (set the winning outcome)
+     * NOTE: This requires oracle authority
+     */
+    async settleMarket(marketAddress, yesWinner) {
+        await this.initialize();
+
+        const market = new PublicKey(marketAddress);
+
+        this.log(`Settling market ${marketAddress} with outcome: ${yesWinner ? 'YES' : 'NO'}`);
+
+        try {
+            const result = await this.client.settleMarket({
+                market,
+                yesWinner
+            });
+            return {
+                success: true,
+                signature: result.signature,
+                market: marketAddress,
+                outcome: yesWinner ? 'yes' : 'no'
+            };
+        } catch (error) {
+            this.log(`Error settling market: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Set market as resolvable (devnet only)
+     */
+    async setMarketResolvable(marketAddress, resolvable = true, forceResolve = false) {
+        await this.initialize();
+
+        const market = typeof marketAddress === 'string' ? marketAddress : marketAddress.toString();
+
+        this.log(`Setting market ${market} resolvable: ${resolvable}`);
+
+        try {
+            const result = await this.client.setMarketResolvable(market, resolvable, forceResolve);
+            return {
+                success: true,
+                signature: result.signature,
+                market,
+                resolvable
+            };
+        } catch (error) {
+            this.log(`Error setting resolvable: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    // ========== MARKET DISCOVERY METHODS ==========
+
+    /**
+     * Discover all markets on PNP Exchange (not just created by this agent)
+     */
+    async discoverMarkets(options = {}) {
+        await this.initialize();
+
+        this.log('Discovering all PNP markets...');
+
+        try {
+            const markets = await this.client.fetchMarkets();
+            return {
+                success: true,
+                markets: markets,
+                count: Array.isArray(markets) ? markets.length : Object.keys(markets).length
+            };
+        } catch (error) {
+            this.log(`Error discovering markets: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Fetch all market addresses (V2)
+     */
+    async fetchAllMarketAddresses(baseUrl) {
+        await this.initialize();
+
+        try {
+            const addresses = await this.client.fetchMarketAddresses(baseUrl);
+            return {
+                success: true,
+                addresses,
+                count: addresses.length
+            };
+        } catch (error) {
+            this.log(`Error fetching market addresses: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Fetch all V3 market addresses
+     */
+    async fetchV3MarketAddresses(baseUrl) {
+        await this.initialize();
+
+        try {
+            const addresses = await this.client.fetchV3MarketAddresses(baseUrl);
+            return {
+                success: true,
+                addresses,
+                count: addresses.length
+            };
+        } catch (error) {
+            this.log(`Error fetching V3 market addresses: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Get market metadata (volume, image, etc.)
+     */
+    async getMarketMetadata(marketAddress, baseUrl) {
+        await this.initialize();
+
+        const market = typeof marketAddress === 'string' ? marketAddress : marketAddress.toString();
+
+        try {
+            const meta = await this.client.getMarketMeta(market, baseUrl);
+            return {
+                success: true,
+                market,
+                metadata: meta
+            };
+        } catch (error) {
+            this.log(`Error fetching market metadata: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Get metadata for multiple markets at once
+     */
+    async getMarketMetadataBatch(marketAddresses, baseUrl) {
+        await this.initialize();
+
+        const markets = marketAddresses.map(m => typeof m === 'string' ? m : m.toString());
+
+        try {
+            const metas = await this.client.getMarketMetaBatch(markets, baseUrl);
+            return {
+                success: true,
+                markets: metas,
+                count: metas.length
+            };
+        } catch (error) {
+            this.log(`Error fetching batch metadata: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Get detailed V2 market info
+     */
+    async getV2MarketInfo(marketAddress, options = {}) {
+        await this.initialize();
+
+        const market = typeof marketAddress === 'string' ? marketAddress : marketAddress.toString();
+
+        try {
+            const info = await this.client.getV2MarketInfo(market, options);
+            return {
+                success: true,
+                market,
+                info
+            };
+        } catch (error) {
+            this.log(`Error fetching V2 market info: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Get detailed P2P market info
+     */
+    async getP2PMarketInfo(marketAddress, options = {}) {
+        await this.initialize();
+
+        const market = typeof marketAddress === 'string' ? marketAddress : marketAddress.toString();
+
+        try {
+            const info = await this.client.getP2PMarketInfo(market, options);
+            return {
+                success: true,
+                market,
+                info
+            };
+        } catch (error) {
+            this.log(`Error fetching P2P market info: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    // ========== P2P MARKET WITH CUSTOM ODDS ==========
+
+    /**
+     * Create a simple P2P market (UI-friendly with USDC amounts)
+     */
+    async createP2PMarketSimple(options) {
+        await this.initialize();
+
+        const {
+            question,
+            side = 'yes',
+            amountUsdc = 1,
+            durationDays = 30,
+            capMultiplier = 5,
+            maxPotRatio
+        } = options;
+
+        this.log(`Creating simple P2P market: "${question}"`);
+        this.log(`Side: ${side}, Amount: ${amountUsdc} USDC, Cap multiplier: ${capMultiplier}x`);
+
+        try {
+            const result = await this.client.createP2PMarketSimple({
+                question,
+                side,
+                amountUsdc,
+                daysUntilEnd: durationDays,
+                creatorSideCapMultiplier: capMultiplier,
+                collateralTokenMint: this.config.collateralMint,
+                maxPotRatio
+            });
+
+            return {
+                success: true,
+                signature: result.signature,
+                market: result.market,
+                yesTokenMint: result.yesTokenMint,
+                noTokenMint: result.noTokenMint,
+                question,
+                side,
+                amountUsdc,
+                durationDays
+            };
+        } catch (error) {
+            this.log(`Error creating simple P2P market: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Create a P2P market with custom odds
+     */
+    async createP2PMarketWithOdds(options) {
+        await this.initialize();
+
+        const {
+            question,
+            side = 'yes',
+            amount,
+            cap,
+            durationDays = 30,
+            oddsBps,  // Odds in basis points (e.g., 7000 = 70%)
+            maxPotRatio
+        } = options;
+
+        const endTime = BigInt(Math.floor(Date.now() / 1000) + (durationDays * 24 * 60 * 60));
+        const initialAmount = amount || this.config.defaultLiquidity;
+        const creatorSideCap = cap || initialAmount * 5n;
+
+        this.log(`Creating P2P market with odds: "${question}"`);
+        this.log(`Side: ${side}, Odds: ${oddsBps / 100}%`);
+
+        try {
+            const result = await this.client.createMarketP2PWithCustomOdds({
+                question,
+                initialAmount,
+                side,
+                creatorSideCap,
+                endTime,
+                oddsBps,
+                maxPotRatio,
+                collateralTokenMint: this.config.collateralMint
+            });
+
+            return {
+                success: true,
+                signature: result.signature,
+                market: result.market,
+                yesTokenMint: result.yesTokenMint,
+                noTokenMint: result.noTokenMint,
+                question,
+                side,
+                oddsBps,
+                durationDays
+            };
+        } catch (error) {
+            this.log(`Error creating P2P market with odds: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Create an AMM market with custom starting odds
+     */
+    async createAMMMarketWithOdds(options) {
+        await this.initialize();
+
+        const {
+            question,
+            liquidity,
+            durationDays = 30,
+            yesOddsBps  // Starting YES odds in basis points (e.g., 5000 = 50%)
+        } = options;
+
+        const endTime = BigInt(Math.floor(Date.now() / 1000) + (durationDays * 24 * 60 * 60));
+        const initialLiquidity = liquidity || this.config.defaultLiquidity;
+
+        this.log(`Creating AMM market with odds: "${question}"`);
+        this.log(`YES odds: ${yesOddsBps / 100}%, Liquidity: ${initialLiquidity}`);
+
+        try {
+            const result = await this.client.createMarketV2WithCustomOdds({
+                question,
+                initialLiquidity,
+                endTime,
+                collateralTokenMint: this.config.collateralMint,
+                yesOddsBps
+            });
+
+            return {
+                success: true,
+                signature: result.signature,
+                market: result.market,
+                question,
+                yesOddsBps,
+                durationDays
+            };
+        } catch (error) {
+            this.log(`Error creating AMM market with odds: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    // ========== CUSTOM ORACLE SUPPORT ==========
+
+    /**
+     * Create a market with a custom oracle/settler address
+     */
+    async createMarketWithCustomOracle(options) {
+        await this.initialize();
+
+        const {
+            question,
+            liquidity,
+            durationDays = 30,
+            settlerAddress,  // The address that will resolve this market
+            yesOddsBps = 5000  // Default 50/50
+        } = options;
+
+        const endTime = BigInt(Math.floor(Date.now() / 1000) + (durationDays * 24 * 60 * 60));
+        const initialLiquidity = liquidity || this.config.defaultLiquidity;
+        const settler = new PublicKey(settlerAddress);
+
+        this.log(`Creating market with custom oracle: "${question}"`);
+        this.log(`Oracle: ${settlerAddress}`);
+
+        try {
+            const result = await this.client.createMarketWithCustomOracle({
+                question,
+                initialLiquidity,
+                endTime,
+                collateralMint: this.config.collateralMint,
+                settlerAddress: settler,
+                yesOddsBps
+            });
+
+            return {
+                success: true,
+                signature: result.signature,
+                market: result.market?.toBase58?.() || result.market?.toString?.() || result.market,
+                question,
+                settlerAddress,
+                durationDays
+            };
+        } catch (error) {
+            this.log(`Error creating market with custom oracle: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    // ========== V3 MARKET SUPPORT ==========
+
+    /**
+     * Buy tokens on a V3 market
+     */
+    async buyV3Tokens(options) {
+        await this.initialize();
+
+        const { marketAddress, side, amountUsdc } = options;
+        const market = new PublicKey(marketAddress);
+
+        this.log(`Buying V3 ${side.toUpperCase()} tokens for ${amountUsdc} USDC on ${marketAddress}`);
+
+        try {
+            const result = await this.client.buyV3TokensUsdc({
+                market,
+                buyYesToken: side === 'yes',
+                amountUsdc
+            });
+
+            return {
+                success: true,
+                signature: result.signature,
+                market: marketAddress,
+                side,
+                amountUsdc
+            };
+        } catch (error) {
+            this.log(`Error buying V3 tokens: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Redeem position on a V3 market
+     */
+    async redeemV3Position(marketAddress) {
+        await this.initialize();
+
+        const market = new PublicKey(marketAddress);
+
+        this.log(`Redeeming V3 position on ${marketAddress}`);
+
+        try {
+            const result = await this.client.redeemV3Position(market);
+            return {
+                success: true,
+                signature: result.signature,
+                market: marketAddress
+            };
+        } catch (error) {
+            this.log(`Error redeeming V3 position: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Redeem P2P market position
+     */
+    async redeemP2PPosition(marketAddress) {
+        await this.initialize();
+
+        this.log(`Redeeming P2P position on ${marketAddress}`);
+
+        try {
+            const result = await this.client.redeemP2PPosition(marketAddress);
+            return {
+                success: true,
+                signature: result.signature,
+                market: marketAddress
+            };
+        } catch (error) {
+            this.log(`Error redeeming P2P position: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Claim P2P market refund
+     */
+    async claimP2PRefund(marketAddress) {
+        await this.initialize();
+
+        this.log(`Claiming P2P refund on ${marketAddress}`);
+
+        try {
+            const result = await this.client.claimP2PMarketRefund(marketAddress);
+            return {
+                success: true,
+                signature: result.signature,
+                market: marketAddress
+            };
+        } catch (error) {
+            this.log(`Error claiming P2P refund: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    // ========== URL DETECTION HELPERS ==========
+
+    /**
+     * Detect Twitter URL in question text
+     */
+    detectTwitterUrl(questionText) {
+        if (this.client.detectTwitterUrl) {
+            return this.client.detectTwitterUrl(questionText);
+        }
+        // Fallback regex
+        const twitterRegex = /https?:\/\/(twitter\.com|x\.com)\/\w+\/status\/\d+/i;
+        const match = questionText.match(twitterRegex);
+        return {
+            question: questionText,
+            twitterUrl: match ? match[0] : undefined
+        };
+    }
+
+    /**
+     * Detect YouTube URL in question text
+     */
+    detectYoutubeUrl(questionText) {
+        if (this.client.detectYoutubeUrl) {
+            return this.client.detectYoutubeUrl(questionText);
+        }
+        // Fallback regex
+        const youtubeRegex = /https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[^\s]+/i;
+        const match = questionText.match(youtubeRegex);
+        return {
+            question: questionText,
+            youtubeUrl: match ? match[0] : undefined
+        };
+    }
+
+    /**
+     * Detect DeFi Llama metric in question text
+     */
+    detectDefiLlamaUrl(questionText) {
+        if (this.client.detectDefiLlamaUrl) {
+            return this.client.detectDefiLlamaUrl(questionText);
+        }
+        return { question: questionText };
+    }
+
+    // ========== GLOBAL CONFIG ==========
+
+    /**
+     * Fetch PNP global configuration
+     */
+    async fetchGlobalConfig() {
+        await this.initialize();
+
+        try {
+            const config = await this.client.fetchGlobalConfig();
+            return {
+                success: true,
+                config: {
+                    publicKey: config.publicKey?.toBase58?.() || config.publicKey,
+                    account: config.account
+                }
+            };
+        } catch (error) {
+            this.log(`Error fetching global config: ${error.message}`, 'error');
+            throw error;
+        }
+    }
 }
 
 export async function createAgent(options = {}) {

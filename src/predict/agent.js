@@ -1,39 +1,32 @@
-// Main Claude Predict Agent - Agentic loop with streaming
+// PNPFUCIUS - The PNP Exchange CLI
+// No external LLM required - uses PNP's built-in oracle
 
-import Anthropic from '@anthropic-ai/sdk';
 import * as readline from 'readline';
 import chalk from 'chalk';
-import { tools, executeTool } from './tools/index.js';
-import { renderMarkdown, printToolUse } from './ui/renderer.js';
-import { printWelcome, printError } from './ui/welcome.js';
+import { executeTool } from './tools/index.js';
+import { printWelcome, printError, printHelp, printGoodbye } from './ui/welcome.js';
 import { handleSlashCommand } from './slash-commands.js';
-import { SYSTEM_PROMPT, WELCOME_MESSAGE } from './prompts.js';
 import { getConfig } from '../config.js';
 
-export class ClaudePredictAgent {
+// Purple color definitions
+const purple = chalk.hex('#A855F7');
+const purpleBright = chalk.hex('#C084FC');
+const purpleDim = chalk.hex('#7C3AED');
+const violet = chalk.hex('#8B5CF6');
+
+export class PnpfuciusAgent {
     constructor(options = {}) {
-        const config = getConfig();
-
-        if (!config.anthropicApiKey) {
-            throw new Error('ANTHROPIC_API_KEY is required. Set it in your .env file.');
-        }
-
-        this.client = new Anthropic({
-            apiKey: config.anthropicApiKey
-        });
-        this.model = options.model || 'claude-opus-4-5-20250514';
-        this.messages = [];
-        this.tools = tools;
+        this.config = getConfig();
         this.verbose = options.verbose ?? false;
-        this.config = config;
     }
 
     /**
-     * Main entry point - run the interactive agent
+     * Main entry point - run the interactive CLI
      */
     async run() {
         printWelcome();
-        console.log(chalk.dim(WELCOME_MESSAGE));
+
+        console.log(chalk.dim('  Type ') + purple('/help') + chalk.dim(' for commands or enter a command directly.'));
         console.log();
 
         const rl = readline.createInterface({
@@ -43,7 +36,7 @@ export class ClaudePredictAgent {
 
         // Handle Ctrl+C gracefully
         rl.on('SIGINT', () => {
-            console.log(chalk.dim('\n\n  Goodbye!'));
+            printGoodbye();
             process.exit(0);
         });
 
@@ -56,20 +49,19 @@ export class ClaudePredictAgent {
                 }
 
                 // Handle slash commands
-                const commandResult = await handleSlashCommand(userInput, {
-                    clearHistory: () => { this.messages = []; }
+                const result = await handleSlashCommand(userInput, {
+                    agent: this,
+                    executeTool: this.executeTool.bind(this)
                 });
 
-                if (commandResult === true) {
-                    // Command was handled directly
+                if (result === true) {
+                    // Command was handled
                     continue;
-                } else if (typeof commandResult === 'string') {
-                    // Command returned a prompt to send to AI
-                    await this.chat(commandResult);
-                } else {
-                    // Normal chat message
-                    await this.chat(userInput);
+                } else if (result === false) {
+                    // Not a slash command - show help
+                    console.log(purpleDim('\n  ◆ Unknown command. Type /help for available commands.\n'));
                 }
+
             } catch (error) {
                 if (error.code === 'ERR_USE_AFTER_CLOSE') {
                     break;
@@ -87,162 +79,213 @@ export class ClaudePredictAgent {
      */
     async prompt(rl) {
         return new Promise((resolve) => {
-            rl.question(chalk.cyan('\n> '), (answer) => {
+            rl.question(purple('\n❯ '), (answer) => {
                 resolve(answer);
             });
         });
     }
 
     /**
-     * Main chat function - sends message and handles agentic loop
+     * Execute a tool and display results
      */
-    async chat(userMessage) {
-        this.messages.push({
-            role: 'user',
-            content: userMessage
-        });
+    async executeTool(toolName, input) {
+        console.log(purpleDim(`\n  ◆ ${toolName}`));
 
-        // Agentic loop - continue until no more tool calls
-        while (true) {
-            try {
-                const stream = await this.client.messages.stream({
-                    model: this.model,
-                    max_tokens: 16000,
-                    system: SYSTEM_PROMPT,
-                    tools: this.tools,
-                    messages: this.messages
-                });
+        try {
+            const result = await executeTool(toolName, input);
 
-                // Handle streaming response
-                const response = await this.handleStream(stream);
-
-                // Add assistant response to history
-                this.messages.push({
-                    role: 'assistant',
-                    content: response.content
-                });
-
-                // Check if we need to execute tools
-                if (response.stop_reason !== 'tool_use') {
-                    break;
-                }
-
-                // Execute tools and add results
-                const toolResults = await this.executeTools(response.content);
-                this.messages.push({
-                    role: 'user',
-                    content: toolResults
-                });
-
-            } catch (error) {
-                if (error.status === 429) {
-                    console.log(chalk.yellow('\n  Rate limited. Waiting 10 seconds...'));
-                    await new Promise(r => setTimeout(r, 10000));
-                    continue;
-                }
-                throw error;
+            if (result.error) {
+                console.log(chalk.red(`  ✗ ${result.error}`));
+            } else {
+                console.log(purple(`  ✓ Done`));
+                this.displayResult(toolName, result);
             }
+
+            return result;
+        } catch (error) {
+            console.log(chalk.red(`  ✗ ${error.message}`));
+            throw error;
         }
     }
 
     /**
-     * Handle streaming response from Claude
+     * Display tool result in a nice format
      */
-    async handleStream(stream) {
-        let currentToolUse = null;
-        let toolInput = '';
-        let firstText = true;
+    displayResult(toolName, result) {
+        console.log();
 
-        console.log(); // New line before response
+        switch (toolName) {
+            case 'discover_all_markets':
+                this.displayMarketDiscovery(result);
+                break;
+            case 'get_market_info':
+            case 'get_v2_market_info':
+            case 'get_p2p_market_info':
+                this.displayMarketInfo(result);
+                break;
+            case 'get_market_prices':
+                this.displayPrices(result);
+                break;
+            case 'get_balances':
+                this.displayBalances(result);
+                break;
+            case 'create_market':
+            case 'create_p2p_market_simple':
+            case 'create_amm_market_with_odds':
+                this.displayMarketCreation(result);
+                break;
+            case 'buy_tokens':
+            case 'sell_tokens':
+            case 'buy_v3_tokens':
+                this.displayTrade(result);
+                break;
+            case 'get_settlement_criteria':
+                this.displaySettlementCriteria(result);
+                break;
+            case 'get_settlement_data':
+                this.displaySettlementData(result);
+                break;
+            case 'redeem_position':
+            case 'redeem_v3_position':
+            case 'redeem_p2p_position':
+                this.displayRedemption(result);
+                break;
+            case 'get_pnp_config':
+                this.displayPnpConfig(result);
+                break;
+            default:
+                // Generic JSON display
+                console.log(chalk.dim(JSON.stringify(result, null, 2)));
+        }
+    }
 
-        for await (const event of stream) {
-            switch (event.type) {
-                case 'content_block_start':
-                    if (event.content_block.type === 'tool_use') {
-                        currentToolUse = event.content_block.name;
-                        toolInput = '';
-                        printToolUse(currentToolUse);
-                    } else if (event.content_block.type === 'text') {
-                        if (firstText) {
-                            firstText = false;
-                        }
-                    }
-                    break;
+    displayMarketDiscovery(result) {
+        const v2Count = result.v2_markets?.length || 0;
+        const v3Count = result.v3_markets?.length || 0;
 
-                case 'content_block_delta':
-                    if (event.delta.type === 'text_delta') {
-                        // Stream text to terminal with markdown rendering
-                        process.stdout.write(event.delta.text);
-                    } else if (event.delta.type === 'input_json_delta') {
-                        toolInput += event.delta.partial_json;
-                    }
-                    break;
+        console.log(purpleBright(`  Found ${result.total || v2Count + v3Count} markets on PNP Exchange\n`));
 
-                case 'content_block_stop':
-                    currentToolUse = null;
-                    toolInput = '';
-                    break;
+        if (v2Count > 0) {
+            console.log(violet('  V2 Markets (AMM)'));
+            for (const addr of result.v2_markets.slice(0, 5)) {
+                console.log(`    ${purple('◆')} ${chalk.dim(addr)}`);
             }
+            if (v2Count > 5) console.log(chalk.dim(`    ... and ${v2Count - 5} more`));
+            console.log();
         }
 
-        console.log(); // New line after response
-
-        return stream.finalMessage();
-    }
-
-    /**
-     * Execute tools from response content
-     */
-    async executeTools(content) {
-        const results = [];
-
-        for (const block of content) {
-            if (block.type === 'tool_use') {
-                console.log(chalk.dim(`  Executing ${block.name}...`));
-
-                const result = await executeTool(block.name, block.input);
-
-                // Log result summary
-                if (result.error) {
-                    console.log(chalk.red(`  Error: ${result.error}`));
-                } else if (result.success !== undefined) {
-                    console.log(chalk.green(`  Done.`));
-                }
-
-                results.push({
-                    type: 'tool_result',
-                    tool_use_id: block.id,
-                    content: JSON.stringify(result, null, 2)
-                });
+        if (v3Count > 0) {
+            console.log(violet('  V3 Markets (P2P)'));
+            for (const addr of result.v3_markets.slice(0, 5)) {
+                console.log(`    ${purple('◆')} ${chalk.dim(addr)}`);
             }
+            if (v3Count > 5) console.log(chalk.dim(`    ... and ${v3Count - 5} more`));
+            console.log();
         }
 
-        return results;
+        console.log(chalk.dim('  Use /info <address> for market details'));
     }
 
-    /**
-     * Add a message to history without triggering a response
-     */
-    addMessage(role, content) {
-        this.messages.push({ role, content });
+    displayMarketInfo(result) {
+        const info = result.info || result;
+        console.log(purpleBright('  Market Info\n'));
+
+        if (info.question) console.log(`  ${chalk.dim('Question:')} ${info.question}`);
+        if (info.market || result.market) console.log(`  ${chalk.dim('Address:')}  ${violet(info.market || result.market)}`);
+        if (info.endTime) console.log(`  ${chalk.dim('End Time:')} ${new Date(Number(info.endTime) * 1000).toLocaleString()}`);
+        if (info.yesTokenMint) console.log(`  ${chalk.dim('YES Mint:')} ${chalk.dim(info.yesTokenMint)}`);
+        if (info.noTokenMint) console.log(`  ${chalk.dim('NO Mint:')}  ${chalk.dim(info.noTokenMint)}`);
     }
 
-    /**
-     * Clear conversation history
-     */
-    clearHistory() {
-        this.messages = [];
+    displayPrices(result) {
+        console.log(purpleBright('  Market Prices\n'));
+        console.log(`  ${chalk.green('YES:')} ${result.yesPrice || 'N/A'}`);
+        console.log(`  ${chalk.red('NO:')}  ${result.noPrice || 'N/A'}`);
     }
 
-    /**
-     * Get conversation history
-     */
-    getHistory() {
-        return [...this.messages];
+    displayBalances(result) {
+        console.log(purpleBright('  Your Balances\n'));
+        console.log(`  ${chalk.green('YES tokens:')} ${result.yesBalance || 0}`);
+        console.log(`  ${chalk.red('NO tokens:')}  ${result.noBalance || 0}`);
+        if (result.usdcBalance) console.log(`  ${chalk.dim('USDC:')}       ${result.usdcBalance}`);
+    }
+
+    displayMarketCreation(result) {
+        console.log(purpleBright('  Market Created!\n'));
+        console.log(`  ${chalk.dim('Address:')}   ${violet(result.market)}`);
+        console.log(`  ${chalk.dim('Signature:')} ${chalk.dim(result.signature?.slice(0, 30) + '...')}`);
+        console.log(`  ${chalk.dim('Network:')}   ${result.network}`);
+        console.log();
+        console.log(chalk.dim(`  View on Solscan: https://solscan.io/tx/${result.signature}`));
+    }
+
+    displayTrade(result) {
+        console.log(purpleBright('  Trade Executed!\n'));
+        console.log(`  ${chalk.dim('Market:')}    ${result.market}`);
+        console.log(`  ${chalk.dim('Side:')}      ${result.side?.toUpperCase()}`);
+        console.log(`  ${chalk.dim('Amount:')}    ${result.amount || result.amountUsdc} USDC`);
+        console.log(`  ${chalk.dim('Signature:')} ${chalk.dim(result.signature?.slice(0, 30) + '...')}`);
+    }
+
+    displaySettlementCriteria(result) {
+        console.log(purpleBright('  PNP Oracle - Settlement Criteria\n'));
+
+        if (result.criteria) {
+            if (typeof result.criteria === 'string') {
+                console.log(`  ${result.criteria}`);
+            } else {
+                console.log(chalk.dim(JSON.stringify(result.criteria, null, 2)));
+            }
+        } else {
+            console.log(chalk.dim('  No criteria available yet'));
+        }
+    }
+
+    displaySettlementData(result) {
+        console.log(purpleBright('  PNP Oracle - Settlement Data\n'));
+
+        if (result.data) {
+            if (result.data.answer) {
+                console.log(`  ${chalk.dim('Answer:')} ${result.data.answer === 'yes' ? chalk.green('YES') : chalk.red('NO')}`);
+            }
+            if (result.data.resolvable !== undefined) {
+                console.log(`  ${chalk.dim('Resolvable:')} ${result.data.resolvable ? chalk.green('Yes') : chalk.yellow('Not yet')}`);
+            }
+            if (result.data.reasoning) {
+                console.log(`  ${chalk.dim('Reasoning:')} ${result.data.reasoning}`);
+            }
+        } else {
+            console.log(chalk.dim('  No settlement data available yet'));
+        }
+    }
+
+    displayRedemption(result) {
+        console.log(purpleBright('  Position Redeemed!\n'));
+        console.log(`  ${chalk.dim('Market:')}    ${result.market}`);
+        console.log(`  ${chalk.dim('Signature:')} ${chalk.dim(result.signature?.slice(0, 30) + '...')}`);
+        console.log();
+        console.log(chalk.green('  Winnings have been sent to your wallet!'));
+    }
+
+    displayPnpConfig(result) {
+        console.log(purpleBright('  PNP Exchange Configuration\n'));
+
+        if (result.config) {
+            if (result.config.publicKey) {
+                console.log(`  ${chalk.dim('Config Address:')} ${result.config.publicKey}`);
+            }
+            if (result.config.account) {
+                console.log(chalk.dim(JSON.stringify(result.config.account, null, 2)));
+            }
+        }
     }
 }
 
 // Export factory function
-export function createPredictAgent(options = {}) {
-    return new ClaudePredictAgent(options);
+export function createPnpfuciusAgent(options = {}) {
+    return new PnpfuciusAgent(options);
 }
+
+// Backwards compatibility
+export const ClaudePredictAgent = PnpfuciusAgent;
+export const createPredictAgent = createPnpfuciusAgent;
