@@ -2,7 +2,7 @@
 
 ## Overview
 
-This update adds **7 new tools** to Claude Predict, bringing the total to **21 tools**. The new capabilities enable full prediction market lifecycle management: create, trade, and redeem.
+This update adds **7 new tools** to  PNPFUCIUS, bringing the total to **21 tools**. The new capabilities enable full prediction market lifecycle management: create, trade, and redeem.
 
 ## New Tools
 
@@ -116,22 +116,10 @@ client.createMarketYoutube({ question, youtubeUrl, ... })
 client.createMarketDefiLlama({ question, metric, ... })
 ```
 
-## Demo
-
-Run the updated demo to see trading in action:
-
-```bash
-npm run demo
-```
-
-The demo now includes:
-1. Generate market ideas
-2. Create a market on Solana
-3. **Check market prices** (NEW)
-4. **Buy YES tokens** (NEW)
-5. View statistics
 
 ## Files Changed
+```
+
 
 | File | Changes |
 |------|---------|
@@ -140,6 +128,7 @@ The demo now includes:
 | `src/predict/tools/index.js` | +10 lines - New tool registrations |
 | `bin/demo-predict.js` | +53 lines - Trading demo flow |
 
+```
 ## Total Tools (21)
 
 **Market (12):** generate_market, create_market, list_markets, get_market_info, check_resolution, buy_tokens, sell_tokens, get_market_prices, get_balances, redeem_position, claim_refund, create_market_from_source
