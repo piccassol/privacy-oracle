@@ -10,7 +10,7 @@
 [![npm version](https://img.shields.io/npm/v/pnpfucius.svg)](https://www.npmjs.com/package/pnpfucius)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> *"The wise trader predicts with patience"*
+> *"The wise trader predicts with patience... and privacy"*
 
 ## Features
 
@@ -42,9 +42,6 @@ npm install
 ```bash
 # Run the interactive CLI
 npm run pnpfucius
-
-# Run the demo (no wallet required)
-npm run demo
 ```
 
 ## Configuration
